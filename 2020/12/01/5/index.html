@@ -1,0 +1,236 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1"><title>磷のx86研究笔记(5) 保护模式Ⅱ | phosphor磷的博客</title><meta name="keywords" content="x86,cpu,计算机"><meta name="author" content="phosphor磷"><meta name="copyright" content="phosphor磷"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta http-equiv="Cache-Control" content="no-transform"><meta http-equiv="Cache-Control" content="no-siteapp"><meta name="description" content="观前提示：这个系列的笔记想到哪写到哪看心情更新 一、cpu的特权级简介 x86保护模式分为4个特权级，如图所示  windows和linux只用到了ring0和ring3两个层级,ring0是内核态，ring3是用户态，数字越小权限越高。硬件上在执行每条指令时都会对指令所具有的特权级做相应的检查，特权指令在ring3下无法执行，这就起到了保护的作用。当前执行的程序所处的状态叫CPL，段描述符所需的">
+<meta property="og:type" content="article">
+<meta property="og:title" content="磷のx86研究笔记(5) 保护模式Ⅱ">
+<meta property="og:url" content="http://www.phosphorlin.cn/2020/12/01/5/index.html">
+<meta property="og:site_name" content="phosphor磷的博客">
+<meta property="og:description" content="观前提示：这个系列的笔记想到哪写到哪看心情更新 一、cpu的特权级简介 x86保护模式分为4个特权级，如图所示  windows和linux只用到了ring0和ring3两个层级,ring0是内核态，ring3是用户态，数字越小权限越高。硬件上在执行每条指令时都会对指令所具有的特权级做相应的检查，特权指令在ring3下无法执行，这就起到了保护的作用。当前执行的程序所处的状态叫CPL，段描述符所需的">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://www.phosphorlin.cn/img/cover/2.png">
+<meta property="article:published_time" content="2020-12-01T01:56:35.000Z">
+<meta property="article:modified_time" content="2020-12-05T04:08:07.689Z">
+<meta property="article:author" content="phosphor磷">
+<meta property="article:tag" content="x86">
+<meta property="article:tag" content="cpu">
+<meta property="article:tag" content="计算机">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://www.phosphorlin.cn/img/cover/2.png"><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="http://www.phosphorlin.cn/2020/12/01/5/"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.css"><script>var GLOBAL_CONFIG = { 
+  root: '/',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  date_suffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  ClickShowText: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  justifiedGallery: {
+    js: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/js/jquery.justifiedGallery.min.js',
+    css: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/css/justifiedGallery.min.css'
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isanchor: false
+};
+
+var saveToLocal = {
+  set: function setWithExpiry(key, value, ttl) {
+    const now = new Date()
+    const expiryDay = ttl * 86400000
+    const item = {
+      value: value,
+      expiry: now.getTime() + expiryDay,
+    }
+    localStorage.setItem(key, JSON.stringify(item))
+  },
+
+  get: function getWithExpiry(key) {
+    const itemStr = localStorage.getItem(key)
+
+    if (!itemStr) {
+      return undefined
+    }
+    const item = JSON.parse(itemStr)
+    const now = new Date()
+
+    if (now.getTime() > item.expiry) {
+      localStorage.removeItem(key)
+      return undefined
+    }
+    return item.value
+  }
+}</script><script id="config_change">var GLOBAL_CONFIG_SITE = { 
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isToc: false,
+  postUpdate: '2020-12-05 12:08:07'
+}</script><noscript><style type="text/css">
+  #nav {
+    opacity: 1
+  }
+  .justified-gallery img {
+    opacity: 1
+  }
+
+  #recent-posts time,
+  #post-meta time {
+    display: inline !important
+  }
+</style></noscript><script>(function () {  window.activateDarkMode = function () {
+    document.documentElement.setAttribute('data-theme', 'dark')
+    if (document.querySelector('meta[name="theme-color"]') !== null) {
+      document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+    }
+  }
+  window.activateLightMode = function () {
+    document.documentElement.setAttribute('data-theme', 'light')
+   if (document.querySelector('meta[name="theme-color"]') !== null) {
+      document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+    }
+  }
+  const autoChangeMode = 'false'
+  const t = saveToLocal.get('theme')
+  if (autoChangeMode === '1') {
+    const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches
+    const isLightMode = window.matchMedia('(prefers-color-scheme: light)').matches
+    const isNotSpecified = window.matchMedia('(prefers-color-scheme: no-preference)').matches
+    const hasNoSupport = !isDarkMode && !isLightMode && !isNotSpecified
+    if (t === undefined) {
+      if (isLightMode) activateLightMode()
+      else if (isDarkMode) activateDarkMode()
+      else if (isNotSpecified || hasNoSupport) {
+        const now = new Date()
+        const hour = now.getHours()
+        const isNight = hour <= 6 || hour >= 18
+        isNight ? activateDarkMode() : activateLightMode()
+      }
+      window.matchMedia('(prefers-color-scheme: dark)').addListener(function (e) {
+        if (saveToLocal.get('theme') === undefined) {
+          e.matches ? activateDarkMode() : activateLightMode()
+        }
+      })
+    } else if (t === 'light') activateLightMode()
+    else activateDarkMode()
+  } else if (autoChangeMode === '2') {
+    const now = new Date()
+    const hour = now.getHours()
+    const isNight = hour <= 6 || hour >= 18
+    if (t === undefined) isNight ? activateDarkMode() : activateLightMode()
+    else if (t === 'light') activateLightMode()
+    else activateDarkMode()
+  } else {
+    if (t === 'dark') activateDarkMode()
+    else if (t === 'light') activateLightMode()
+  }const asideStatus = saveToLocal.get('aside-status')
+if (asideStatus !== undefined) {
+   if (asideStatus === 'hide') {
+     document.documentElement.classList.add('hide-aside')
+   } else {
+     document.documentElement.classList.remove('hide-aside')
+   }
+}})()</script><meta name="generator" content="Hexo 5.2.0"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="author-avatar"><img class="avatar-img" src="/img/ttt.jpg" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data"><div class="data-item is-center"><div class="data-item-link"><a href="/archives/"><div class="headline">文章</div><div class="length-num">5</div></a></div></div><div class="data-item is-center"><div class="data-item-link"><a href="/tags/"><div class="headline">标签</div><div class="length-num">3</div></a></div></div></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 主页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 文章</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 类别</span></a></div><div class="menus_item"><a class="site-page" href="javascript:void(0);"><i class="fa-fw fas fa-list"></i><span> 列表</span><i class="fas fa-chevron-down expand"></i></a><ul class="menus_item_child"><li><a class="site-page" href="/music/"><i class="fa-fw fas fa-music"></i><span> 音乐</span></a></li><li><a class="site-page" href="/movies/"><i class="fa-fw fas fa-video"></i><span> 电影</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-link"></i><span> 链接</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div></div></div><div id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(/img/cover/2.png)"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">phosphor磷的博客</a></span><span id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 主页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 文章</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 类别</span></a></div><div class="menus_item"><a class="site-page" href="javascript:void(0);"><i class="fa-fw fas fa-list"></i><span> 列表</span><i class="fas fa-chevron-down expand"></i></a><ul class="menus_item_child"><li><a class="site-page" href="/music/"><i class="fa-fw fas fa-music"></i><span> 音乐</span></a></li><li><a class="site-page" href="/movies/"><i class="fa-fw fas fa-video"></i><span> 电影</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-link"></i><span> 链接</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div><span class="close" id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></span></span></nav><div id="post-info"><h1 class="post-title">磷のx86研究笔记(5) 保护模式Ⅱ</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2020-12-01T01:56:35.000Z" title="发表于 2020-12-01 09:56:35">2020-12-01</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2020-12-05T04:08:07.689Z" title="更新于 2020-12-05 12:08:07">2020-12-05</time></span></div><div class="meta-secondline"> <span class="post-meta-separator">|</span><span class="post-meta-pv-cv"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><p>观前提示：这个系列的笔记想到哪写到哪看心情更新</p>
+<p>一、cpu的特权级简介</p>
+<p>x86保护模式分为4个特权级，如图所示</p>
+<p><img src="https://i0.hdslb.com/bfs/article/a8d2ae5afd9efefa95deef90b6c89a3b86d99d6f.png" alt="img"></p>
+<p>windows和linux只用到了ring0和ring3两个层级,ring0是内核态，ring3是用户态，数字越小权限越高。硬件上在执行每条指令时都会对指令所具有的特权级做相应的检查，特权指令在ring3下无法执行，这就起到了保护的作用。当前执行的程序所处的状态叫CPL，段描述符所需的权限为DPL，还有请求特权级RPL。</p>
+<p>二、保护模式下的段寄存器</p>
+<p>保护模式下新增了es,fs,gs三个段寄存器，段寄存器在保护模式下和实模式下有着很大的区别。保护模式下段寄存器中有16位是可见部分，有80位是不可见部分，一共96位。其中可见的部分称为段选择子，用来选择段描述符，剩下不可见的80位是高速缓冲，这里不用管它。</p>
+<p><img src="https://i0.hdslb.com/bfs/article/89903f8f53b9e08fc4636cee6fa2cec1b6b6596b.png" alt="img"></p>
+<p>段选择子的0-1位是RPL位，2位是TI位，3-15位是Index位</p>
+<p>RPL是请求特权级，以什么样的权限去访问段</p>
+<p>TI是Table Indicator，当TI=0表示查找GDT表，TI=1则查找LDT表</p>
+<p>INDEX是在GDT表或LDT表中的索引号，查找哪个段描述符</p>
+<p>三、常用指令–call/ret</p>
+<p>这个指令类似于其他语言中的函数调用（事实上是其底层实现）</p>
+<p>call 标号，当执行call指令时，进行两步操作：</p>
+<p>1）将将其返回地址压入堆栈</p>
+<p>2）转移到相应地址</p>
+<p>RET 指令从堆栈则是把返回地址弹回到指令指针寄存器，它们都修改IP的值，或同时修改CS和IP的值。call指令不能实现短转移，call指令实现转移的方法和jmp指令的原理相同。call和ret指令共同支持了汇编语言编程中的模块化设计。</p>
+</article><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/x86/">x86</a><a class="post-meta__tags" href="/tags/cpu/">cpu</a><a class="post-meta__tags" href="/tags/%E8%AE%A1%E7%AE%97%E6%9C%BA/">计算机</a></div><div class="post_share"><div class="social-share" data-image="/img/cover/2.png" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/social-share.js/dist/css/share.min.css"><script src="https://cdn.jsdelivr.net/npm/social-share.js/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><div class="next-post pull-full"><a href="/2020/12/01/4/"><img class="next-cover" src="/img/cover/1.jpg" onerror="onerror=null;src='/img/404.jpg'"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">磷のx86研究笔记(4) 保护模式Ⅰ</div></div></a></div></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span> 相关推荐</span></div><div class="relatedPosts-list"><div><a href="/2020/11/29/1/" title="磷のx86研究笔记(1) 基础"><img class="cover" src="/img/cover/3.png" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2020-11-29</div><div class="title">磷のx86研究笔记(1) 基础</div></div></a></div><div><a href="/2020/11/29/2/" title="磷のx86研究笔记(2) 真实模式Ⅰ"><img class="cover" src="/img/cover/3.png" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2020-11-29</div><div class="title">磷のx86研究笔记(2) 真实模式Ⅰ</div></div></a></div><div><a href="/2020/11/29/3/" title="磷のx86研究笔记(3) 真实模式Ⅱ"><img class="cover" src="/img/cover/5.png" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2020-11-29</div><div class="title">磷のx86研究笔记(3) 真实模式Ⅱ</div></div></a></div><div><a href="/2020/12/01/4/" title="磷のx86研究笔记(4) 保护模式Ⅰ"><img class="cover" src="/img/cover/1.jpg" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2020-12-01</div><div class="title">磷のx86研究笔记(4) 保护模式Ⅰ</div></div></a></div></div></div></div><div class="aside_content" id="aside_content"><div class="card-widget card-info"><div class="card-content"><div class="card-info-avatar is-center"><img class="avatar-img" src="/img/ttt.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/><div class="author-info__name">phosphor磷</div><div class="author-info__description"></div></div><div class="card-info-data"><div class="card-info-data-item is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">5</div></a></div><div class="card-info-data-item is-center"><a href="/tags/"><div class="headline">标签</div><div class="length-num">3</div></a></div></div><a class="button--animated" id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/sbt3357"><i class="fab fa-github"></i><span>GitHub</span></a></div></div><div class="card-widget card-announcement"><div class="card-content"><div class="item-headline"><i class="fas fa-bullhorn card-announcement-animation"></i><span>公告</span></div><div class="announcement_content">测试用博客</div></div></div><div class="sticky_layout"><div class="card-widget card-recent-post"><div class="card-content"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/2020/12/01/5/" title="磷のx86研究笔记(5) 保护模式Ⅱ"><img src="/img/cover/2.png" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="磷のx86研究笔记(5) 保护模式Ⅱ"/></a><div class="content"><a class="title" href="/2020/12/01/5/" title="磷のx86研究笔记(5) 保护模式Ⅱ">磷のx86研究笔记(5) 保护模式Ⅱ</a><time datetime="2020-12-01T01:56:35.000Z" title="发表于 2020-12-01 09:56:35">2020-12-01</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2020/12/01/4/" title="磷のx86研究笔记(4) 保护模式Ⅰ"><img src="/img/cover/1.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="磷のx86研究笔记(4) 保护模式Ⅰ"/></a><div class="content"><a class="title" href="/2020/12/01/4/" title="磷のx86研究笔记(4) 保护模式Ⅰ">磷のx86研究笔记(4) 保护模式Ⅰ</a><time datetime="2020-12-01T01:55:35.000Z" title="发表于 2020-12-01 09:55:35">2020-12-01</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2020/11/29/3/" title="磷のx86研究笔记(3) 真实模式Ⅱ"><img src="/img/cover/5.png" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="磷のx86研究笔记(3) 真实模式Ⅱ"/></a><div class="content"><a class="title" href="/2020/11/29/3/" title="磷のx86研究笔记(3) 真实模式Ⅱ">磷のx86研究笔记(3) 真实模式Ⅱ</a><time datetime="2020-11-29T01:55:35.000Z" title="发表于 2020-11-29 09:55:35">2020-11-29</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2020/11/29/1/" title="磷のx86研究笔记(1) 基础"><img src="/img/cover/3.png" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="磷のx86研究笔记(1) 基础"/></a><div class="content"><a class="title" href="/2020/11/29/1/" title="磷のx86研究笔记(1) 基础">磷のx86研究笔记(1) 基础</a><time datetime="2020-11-29T01:55:00.000Z" title="发表于 2020-11-29 09:55:00">2020-11-29</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2020/11/29/2/" title="磷のx86研究笔记(2) 真实模式Ⅰ"><img src="/img/cover/3.png" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="磷のx86研究笔记(2) 真实模式Ⅰ"/></a><div class="content"><a class="title" href="/2020/11/29/2/" title="磷のx86研究笔记(2) 真实模式Ⅰ">磷のx86研究笔记(2) 真实模式Ⅰ</a><time datetime="2020-11-29T01:55:00.000Z" title="发表于 2020-11-29 09:55:00">2020-11-29</time></div></div></div></div></div></div></div></main><footer id="footer" style="background-image: url(/img/cover/2.png)"><div id="footer-wrap"><div class="copyright">&copy;2020 By phosphor磷</div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="设置"><i class="fas fa-cog"></i></button><button id="go-up" type="button" title="回到顶部"><i class="fas fa-arrow-up"></i></button></div></div><div><script src="https://cdn.jsdelivr.net/npm/jquery@latest/dist/jquery.min.js"></script><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.js"></script><div class="js-pjax"><script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div><script defer="defer" id="ribbon" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/dist/canvas-ribbon.min.js" size="150" alpha="0.6" zIndex="-1" mobile="false" data-click="false"></script><script id="canvas_nest" defer="defer" color="0,0,255" opacity="0.7" zIndex="-1" count="99" mobile="false" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/dist/canvas-nest.min.js"></script><script src="https://cdn.jsdelivr.net/npm/pjax/pjax.min.js"></script><script>let pjaxSelectors = [
+  'title',
+  '#config_change',
+  '#body-wrap',
+  '#rightside-config-hide',
+  '#rightside-config-show',
+  '.js-pjax'
+]
+
+if (false) {
+  pjaxSelectors.unshift('meta[property="og:image"]', 'meta[property="og:title"]', 'meta[property="og:url"]')
+}
+
+var pjax = new Pjax({
+  elements: 'a:not([target="_blank"])',
+  selectors: pjaxSelectors,
+  cacheBust: false,
+  analytics: false,
+  scrollRestoration: false
+})
+
+document.addEventListener('pjax:complete', function () {
+  window.refreshFn()
+
+  $('script[data-pjax]').each(function () {
+    $(this).parent().append($(this).remove())
+  })
+
+  GLOBAL_CONFIG.islazyload && window.lazyLoadInstance.update()
+
+  typeof chatBtnFn === 'function' && chatBtnFn()
+  typeof panguInit === 'function' && panguInit()
+
+  if (typeof gtag === 'function') {
+    gtag('config', '', {'page_path': window.location.pathname});
+  }
+
+  typeof loadMeting === 'function' && document.getElementsByClassName('aplayer').length && loadMeting()
+
+  // Analytics
+  if (false) {
+    MtaH5.pgv()
+  }
+
+  // prismjs
+  typeof Prism === 'object' && Prism.highlightAll()
+
+  typeof preloader === 'object' && preloader.endLoading()
+})
+
+
+document.addEventListener('pjax:send', function () {
+  typeof preloader === 'object' && preloader.initLoading()
+  
+  if (window.aplayers) {
+    for (let i = 0; i < window.aplayers.length; i++) {
+      if (!window.aplayers[i].options.fixed) {
+        window.aplayers[i].destroy()
+      }
+    }
+  }
+
+  typeof typed === 'object' && typed.destroy()
+
+  $(window).off('scroll')
+
+  //reset readmode
+  $('body').hasClass('read-mode') && $('body').removeClass('read-mode')
+
+})</script></div></body></html>
